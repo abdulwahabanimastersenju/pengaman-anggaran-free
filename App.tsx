@@ -684,12 +684,40 @@ const BatchInputModalContent: React.FC<{
         onSave(items);
     };
 
+    const handleSaveRow = (id: number, keepOpen: boolean) => {
+        const row = rows.find(r => r.id === id);
+        if (!row) return;
+
+        const item: ScannedItem = {
+            desc: row.desc,
+            amount: getRawNumber(row.amount),
+            budgetId: row.budgetId === 'daily' ? 'daily' : Number(row.budgetId)
+        };
+
+        if (!item.desc.trim() || item.amount <= 0) return; // Validation
+
+        onSave([item]); // Save single item, pass array as expected
+
+        // Remove saved row
+        const remainingRows = rows.filter(r => r.id !== id);
+        if (remainingRows.length === 0) {
+             setRows([{ id: Date.now(), desc: '', amount: '', budgetId: 'daily' }]); // Reset if empty
+        } else {
+             setRows(remainingRows);
+        }
+        
+        // If it was the last row being typed in, auto add a new one for convenience
+        if (rows[rows.length - 1].id === id) {
+             setRows(prev => [...prev, { id: Date.now(), desc: '', amount: '', budgetId: 'daily' }]);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="max-h-[60vh] overflow-y-auto space-y-3 p-1">
                 {rows.map((row, index) => (
-                    <div key={row.id} className="flex flex-col sm:flex-row gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 animate-fade-in-up">
-                        <div className="flex-1">
+                    <div key={row.id} className="flex flex-col sm:flex-row gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 animate-fade-in-up items-end sm:items-center relative">
+                        <div className="flex-1 w-full">
                             <label className="block text-xs font-bold text-gray-500 mb-1">Keterangan {index + 1}</label>
                             <input 
                                 value={row.desc} 
@@ -722,6 +750,13 @@ const BatchInputModalContent: React.FC<{
                                 ))}
                             </select>
                         </div>
+                         <button 
+                            onClick={() => handleSaveRow(row.id, true)}
+                            className="p-2 bg-teal-100 text-teal-600 rounded-lg hover:bg-teal-200 transition-colors mb-[1px] sm:mb-0"
+                            title="Simpan baris ini saja"
+                        >
+                            <PlusCircleIcon className="w-6 h-6" />
+                        </button>
                     </div>
                 ))}
             </div>
@@ -2927,7 +2962,6 @@ const App: React.FC = () => {
                     onAddBudget={() => setActiveModal('addBudget')}
                     onReorderBudgets={handleReorderBudgets}
                     onSetBudgetPermanence={handleSetBudgetPermanence}
-                    onOpenBatchInput={openBatchInput}
                     hasApiKey={hasApiKey}
                 />;
         }

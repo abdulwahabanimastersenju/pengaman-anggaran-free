@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import type { AppState, Budget, Transaction } from '../types';
-import { LightbulbIcon, ArrowPathIcon, PlusCircleIcon, BudgetIcon, LockClosedIcon, ListBulletIcon, SparklesIcon, ChevronRightIcon } from './Icons';
+import { LightbulbIcon, ArrowPathIcon, PlusCircleIcon, BudgetIcon, LockClosedIcon, ListBulletIcon, SparklesIcon, ChevronRightIcon, BanknotesIcon } from './Icons';
 import { CountUp, Skeleton, AISkeleton } from './UI';
 
 interface DashboardProps {
@@ -17,7 +17,6 @@ interface DashboardProps {
   onAddBudget: () => void;
   onReorderBudgets: (reorderedBudgets: Budget[]) => void;
   onSetBudgetPermanence: (budgetId: number, isTemporary: boolean) => void;
-  onOpenBatchInput: () => void;
   hasApiKey: boolean;
 }
 
@@ -51,8 +50,8 @@ const OverviewCard: React.FC<{
     totalDailySpentToday: number;
     onUseDailyBudget: () => void;
     onViewDailyHistory: () => void;
-    onOpenBatchInput: () => void;
-}> = ({ monthlyIncome, totalUsedOverall, totalRemaining, currentAvailableFunds, totalDailySpentToday, onUseDailyBudget, onViewDailyHistory, onOpenBatchInput }) => {
+    onAddIncome: () => void;
+}> = ({ monthlyIncome, totalUsedOverall, totalRemaining, currentAvailableFunds, totalDailySpentToday, onUseDailyBudget, onViewDailyHistory, onAddIncome }) => {
     const remainingDays = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate() + 1;
     const dailyBudgetMax = remainingDays > 0 ? currentAvailableFunds / remainingDays : currentAvailableFunds;
     const dailyBudgetRemaining = dailyBudgetMax - totalDailySpentToday;
@@ -101,9 +100,9 @@ const OverviewCard: React.FC<{
                          <PlusCircleIcon className="w-5 h-5" />
                         <span>Catat</span>
                     </button>
-                     <button onClick={onOpenBatchInput} className="w-full bg-white border-2 border-accent-teal text-accent-teal font-bold py-3 px-4 rounded-lg hover:bg-teal-50 transition-colors shadow flex items-center justify-center gap-2">
-                        <ListBulletIcon className="w-5 h-5" />
-                        <span>Sekaligus</span>
+                     <button onClick={onAddIncome} className="w-full bg-white border-2 border-accent-teal text-accent-teal font-bold py-3 px-4 rounded-lg hover:bg-teal-50 transition-colors shadow flex items-center justify-center gap-2">
+                        <BanknotesIcon className="w-5 h-5" />
+                        <span>Pemasukan</span>
                     </button>
                 </div>
             </div>
@@ -297,7 +296,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
     const totalAllocated = state.budgets.reduce((sum, b) => sum + b.totalBudget, 0);
     const unallocatedFunds = monthlyIncome - totalAllocated;
-    const currentAvailableFunds = unallocatedFunds - monthlyGeneralExpense - totalDailySpent;
+    const theoreticalAvailableFunds = unallocatedFunds - monthlyGeneralExpense - totalDailySpent;
+    
+    // Safety Check: Actual money remaining vs Theoretical. Use the lower one, but not less than 0 for the purpose of daily quota.
+    const currentAvailableFunds = Math.min(theoreticalAvailableFunds, totalRemaining);
+
     const todaysDailyExpenses = state.dailyExpenses.filter(exp => new Date(exp.timestamp).toDateString() === new Date().toDateString());
     const totalDailySpentToday = todaysDailyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
@@ -456,7 +459,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                     totalDailySpentToday={totalDailySpentToday}
                     onUseDailyBudget={props.onUseDailyBudget}
                     onViewDailyHistory={props.onViewDailyHistory}
-                    onOpenBatchInput={props.onOpenBatchInput}
+                    onAddIncome={props.onManageFunds}
                 />
                 
                 <AIInsightCard 
